@@ -43,16 +43,16 @@ struct SatMiterList {
 };
 
 int ClapAttack_ClapAttackAbc(Abc_Frame_t *pAbc, char *pKey, char *pOutFile, int alg, int keysConsideredCutoff,
-                             float keyElimCutoff, int probeResolutionSize, char *pSeqCircuitFile, int unrollTimes);
+                             float keyElimCutoff, int probeSize, char *pSeqCircuitFile, int unrollTimes);
 int ClapAttack_ClapAttack(Abc_Frame_t *pAbc, char *pKey, char *pOutFile, int alg, int keysConsideredCutoff,
-                            float keyElimCutoff, int probeResolutionSize, Abc_Ntk_t* pUnrolled, int unrollTimes);
+                            float keyElimCutoff, int probeSize, Abc_Ntk_t* pUnrolled, int unrollTimes);
 void ClapAttack_TraversalRecursive(Abc_Ntk_t *pNtk, Abc_Obj_t *pCurNode, struct BSI_KeyData_t *pGlobalBsiKeys,
                                    int *pOracleKey, int MaxKeysConsidered, Abc_Ntk_t **ppCurKeyCnf, int *pTotalProbes,
-                                   int probeResolutionSize, Abc_Ntk_t* pUnrolled, int unrollTimes);
+                                   int probeSize, Abc_Ntk_t* pUnrolled, int unrollTimes);
 void ClapAttack_TraversalRecursiveHeuristic(Abc_Ntk_t *pNtk, Abc_Obj_t *pCurNode, struct BSI_KeyData_t *pGlobalBsiKeys,
                                             int MaxKeysConsidered, Abc_Ntk_t **ppCurKeyCnf,
                                             struct SatMiterList **ppSatMiterList, int *pNumProbes, int MaxProbes,
-                                            int probeResolutionSize, Abc_Ntk_t* pUnrolled, int unrollTimes);
+                                            int probeSize, Abc_Ntk_t* pUnrolled, int unrollTimes);
 void ClapAttack_CombineMitersHeuristic(struct SatMiterList **ppSatMiterListOld, struct SatMiterList **ppSatMiterListNew,
                                        int *pMaxNodesConsidered, int MaxKeysConsidered, int MaxPiNum,
                                        int fConsiderAll, Abc_Ntk_t* pUnrolled, int unrollTimes);
@@ -60,14 +60,14 @@ void ClapAttack_InterpretDiHeuristic(Abc_Ntk_t *pNtk, Abc_Ntk_t *pNtkMiter, int 
                                      int *KeyNoFreq, int **ppDiFull);
 void ClapAttack_EvalMultinodeProbe(struct SatMiterList *pSatMiter, Abc_Ntk_t *pNtk,
                                    struct BSI_KeyData_t *pGlobalBsiKeys, int *pOracleKey, Abc_Ntk_t **ppCurKeyCnf,
-                                   int MaxKeysConsidered, int probeResolutionSize);
+                                   int MaxKeysConsidered, int probeSize);
 void ClapAttack_UpdateSatMiterList(struct SatMiterList **ppSatMiterList, Abc_Obj_t **ppNode, Abc_Ntk_t *pMiter,
                                    int NumKeys, char **KeyNames, int MaxNodesConsidered, float IdentifiableKeys,
                                    int *pModel);
 void ClapAttack_FreeSatMiterList(struct SatMiterList **ppSatMiterList);
 void ClapAttack_GenSatAttackConfig(Abc_Ntk_t *pNtk, struct BSI_KeyData_t *pGlobalBsiKeys, char *pOutFile);
 int ClapAttack_UpdateGlobalKeyCnf(Abc_Ntk_t **ppCurKeyCnf, struct BSI_KeyData_t *pGlobalBsiKeys);
-int ClapAttack_IsolateCone(Abc_Ntk_t *pNtk, Abc_Ntk_t **ppNtkCone, Abc_Obj_t *pProbe, int probeResolutionSize);
+int ClapAttack_IsolateCone(Abc_Ntk_t *pNtk, Abc_Ntk_t **ppNtkCone, Abc_Obj_t *pProbe, int probeSize);
 void ClapAttack_CleanCone(Abc_Ntk_t **ppNtk);
 void ClapAttack_RenamePo(Abc_Ntk_t *pNtk, int PoIdx, char *NewPoName);
 void ClapAttack_InitKeyCnf(Abc_Ntk_t **ppNtk, int NumKeys, int *WrongKeyValue, char **KeyNames);
@@ -115,7 +115,7 @@ int nAvgKeyCount;
 // CLAP Attack wrapper function -- entry point to CLAP
 int ClapAttack_ClapAttackAbc(Abc_Frame_t *pAbc, char *pKey, char *pOutFile,
                              int alg, int keysConsideredCutoff,
-                             float keyElimCutoff, int probeResolutionSize,
+                             float keyElimCutoff, int probeSize,
                              char *pSeqCircuitFile, int unrollTimes) {
     Abc_Ntk_t *pNtk, *pSeqNtk, *pUnrolled = NULL;
 
@@ -162,7 +162,7 @@ int ClapAttack_ClapAttackAbc(Abc_Frame_t *pAbc, char *pKey, char *pOutFile,
     // Call the main function
     result = ClapAttack_ClapAttack(
         pAbc, pKey, pOutFile, alg, keysConsideredCutoff, keyElimCutoff,
-        probeResolutionSize, pUnrolled, unrollTimes);
+        probeSize, pUnrolled, unrollTimes);
 
     return result;
 }
@@ -243,7 +243,7 @@ int count_partial_key_leakage(const char *verilog_file_path) {
 
 int ClapAttack_ClapAttack(Abc_Frame_t *pAbc, char *pKey, char *pOutFile,
                           int alg, int keysConsideredCutoff,
-                          float keyElimCutoff, int probeResolutionSize,
+                          float keyElimCutoff, int probeSize,
                           Abc_Ntk_t* pUnrolled, int unrollTimes) {
     int i, j = 0, NumKeys, KeyIndex, MaxKeysConsidered, KeysFound, MaxNodesConsidered;
     Abc_Ntk_t *pNtk, *pCurKeyCnf;
@@ -358,7 +358,7 @@ int ClapAttack_ClapAttack(Abc_Frame_t *pAbc, char *pKey, char *pOutFile,
                                 // restart new traversal
                                 ClapAttack_TraversalRecursiveHeuristic(pNtk, pPi, &GlobalBsiKeys, MaxKeysConsidered,
                                                                        &GlobalBsiKeys.pKeyCnf, &pSatMiterList,
-                                                                       &NumProbes, MaxProbes, probeResolutionSize,
+                                                                       &NumProbes, MaxProbes, probeSize,
                                                                        pUnrolled, unrollTimes);
                             }
                         }
@@ -419,7 +419,7 @@ int ClapAttack_ClapAttack(Abc_Frame_t *pAbc, char *pKey, char *pOutFile,
                     // Simulate and infer from the EOFM probe.
                     TotalProbes++;
                     ClapAttack_EvalMultinodeProbe(pSatMiterList, pNtk, &GlobalBsiKeys, pOracleKey,
-                                                  &GlobalBsiKeys.pKeyCnf, MaxKeysConsidered, probeResolutionSize);
+                                                  &GlobalBsiKeys.pKeyCnf, MaxKeysConsidered, probeSize);
                     ClapAttack_FreeSatMiterList(&pSatMiterList);
                     MaxNodesConsidered = 2;
                     pSatMiterList = NULL;
@@ -471,7 +471,7 @@ int ClapAttack_ClapAttack(Abc_Frame_t *pAbc, char *pKey, char *pOutFile,
 
                             // Recursively traverse from the current key inputs fan-out
                             ClapAttack_TraversalRecursive(pNtk, pPi, &GlobalBsiKeys, pOracleKey, MaxKeysConsidered,
-                                                          &pCurKeyCnf, &TotalProbes, probeResolutionSize, 
+                                                          &pCurKeyCnf, &TotalProbes, probeSize, 
                                                           pUnrolled, unrollTimes);
                         }
                     }
@@ -531,7 +531,7 @@ int ClapAttack_ClapAttack(Abc_Frame_t *pAbc, char *pKey, char *pOutFile,
 // probing is explored in the heuristic version of this function below.
 void ClapAttack_TraversalRecursive(Abc_Ntk_t *pNtk, Abc_Obj_t *pCurNode, struct BSI_KeyData_t *pGlobalBsiKeys,
                                    int *pOracleKey, int MaxKeysConsidered, Abc_Ntk_t **ppCurKeyCnf, int *pTotalProbes,
-                                   int probeResolutionSize, Abc_Ntk_t* pUnrolled, int unrollTimes) {
+                                   int probeSize, Abc_Ntk_t* pUnrolled, int unrollTimes) {
     int *pFullDi;
     int i, j, k, m, SatStatus, MiterStatus, reachabilityStatus, NumKeys, NumKnownKeys, *KeyWithFreq, *KeyNoFreq, *WrongKeyValue,
         KeyValue = 0, PartialKeySatStatus, fCurKeyCnfAlloc;
@@ -566,7 +566,7 @@ void ClapAttack_TraversalRecursive(Abc_Ntk_t *pNtk, Abc_Obj_t *pCurNode, struct 
 
             // Check supports ... if only one is an unknown key,
             // process it and continue fanout
-            ClapAttack_IsolateCone(pNtk, &pNtkCone, pNode, probeResolutionSize);
+            ClapAttack_IsolateCone(pNtk, &pNtkCone, pNode, probeSize);
 
             // Loop over the miter generation phase until SAT fails
             do {
@@ -786,7 +786,7 @@ void ClapAttack_TraversalRecursive(Abc_Ntk_t *pNtk, Abc_Obj_t *pCurNode, struct 
         // If we have fewer than the maximum allowable keys, continue fan-out traverse. (Recurse)
         if (NumKeys <= MaxKeysConsidered) {
             ClapAttack_TraversalRecursive(pNtk, pNode, pGlobalBsiKeys, pOracleKey, MaxKeysConsidered, ppCurKeyCnf,
-                                          pTotalProbes, probeResolutionSize, pUnrolled, unrollTimes);
+                                          pTotalProbes, probeSize, pUnrolled, unrollTimes);
         }
     }
 
@@ -941,7 +941,7 @@ void ClapAttack_CombineMitersHeuristic(struct SatMiterList **ppSatMiterListOld,
 void ClapAttack_TraversalRecursiveHeuristic(Abc_Ntk_t *pNtk, Abc_Obj_t *pCurNode, struct BSI_KeyData_t *pGlobalBsiKeys,
                                             int MaxKeysConsidered, Abc_Ntk_t **ppCurKeyCnf,
                                             struct SatMiterList **ppSatMiterList, int *pNumProbes, int MaxProbes,
-                                            int probeResolutionSize, Abc_Ntk_t* pUnrolled, int unrollTimes) {
+                                            int probeSize, Abc_Ntk_t* pUnrolled, int unrollTimes) {
     int i, j, k, SatStatus, MiterStatus, NumKeys, NumKnownKeys, fCurKeyCnfAlloc, reachabilityStatus;
     Abc_Ntk_t *pNtkCone, *pNtkMiter;
     Abc_Obj_t *pNode, *pPi, **ppNodeFreeList;
@@ -975,7 +975,7 @@ void ClapAttack_TraversalRecursiveHeuristic(Abc_Ntk_t *pNtk, Abc_Obj_t *pCurNode
 
             // Check supports ... if only one is an unknown key,
             // process it and continue fanout
-            ClapAttack_IsolateCone(pNtk, &pNtkCone, pNode, probeResolutionSize);
+            ClapAttack_IsolateCone(pNtk, &pNtkCone, pNode, probeSize);
 
             // Loop over the miter generation phase until SAT fails
             NumKeys = 0;
@@ -1067,7 +1067,7 @@ void ClapAttack_TraversalRecursiveHeuristic(Abc_Ntk_t *pNtk, Abc_Obj_t *pCurNode
         // Recurse
         if ((NumKeys <= MaxKeysConsidered) && (*pNumProbes <= MaxProbes)) {
             ClapAttack_TraversalRecursiveHeuristic(pNtk, pNode, pGlobalBsiKeys, MaxKeysConsidered, ppCurKeyCnf,
-                                                   ppSatMiterList, pNumProbes, MaxProbes, probeResolutionSize,
+                                                   ppSatMiterList, pNumProbes, MaxProbes, probeSize,
                                                    pUnrolled, unrollTimes);
         }
     }
@@ -1076,7 +1076,7 @@ void ClapAttack_TraversalRecursiveHeuristic(Abc_Ntk_t *pNtk, Abc_Obj_t *pCurNode
 // Evaluate/simulate a multinode EOFM probe and infer key information leakage that will be produced.
 void ClapAttack_EvalMultinodeProbe(struct SatMiterList *pSatMiter, Abc_Ntk_t *pNtk,
                                    struct BSI_KeyData_t *pGlobalBsiKeys, int *pOracleKey, Abc_Ntk_t **ppCurKeyCnf,
-                                   int MaxKeysConsidered, int probeResolutionSize) {
+                                   int MaxKeysConsidered, int probeSize) {
     int *pFullDi;
     int i, j, k, m, NumKeys, NumKnownKeys, *KeyWithFreq, *KeyNoFreq, *WrongKeyValue, KeyValue = 0, PartialKeySatStatus,
                                                                                      fCurKeyCnfAlloc, fRerunInfer;
@@ -1102,7 +1102,7 @@ void ClapAttack_EvalMultinodeProbe(struct SatMiterList *pSatMiter, Abc_Ntk_t *pN
     // process it and continue fanout
     for (i = 0; i < pSatMiter->MatchedNodes; i++) {
         pNode = pSatMiter->ppSatNode[i];
-        ClapAttack_IsolateCone(pNtk, &pNtkCone, pSatMiter->ppSatNode[i], probeResolutionSize);
+        ClapAttack_IsolateCone(pNtk, &pNtkCone, pSatMiter->ppSatNode[i], probeSize);
 
         // Loop over the miter generation phase until SAT fails
         NumKeys = 0;

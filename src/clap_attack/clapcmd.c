@@ -11,7 +11,7 @@ void ClapAttack_Init(Abc_Frame_t *pAbc) { Cmd_CommandAdd(pAbc, "Various", "clap"
 
 int ClapAttack_CommandClapAttack(Abc_Frame_t *pAbc, int argc, char **argv) {
     int fVerbose;
-    int c, result, alg = 0, keysConsideredCutoff = 7, probeResolutionSize = 1, unrollTimes = -1;
+    int c, result, alg = 0, keysConsideredCutoff = 7, probeSize = 1, unrollTimes = -1;
 
     char *pKey = NULL, *pOutFile = NULL, *pSeqInputCircuitFile = NULL;
     float keyElimCutoff = 0.006125;
@@ -64,8 +64,8 @@ int ClapAttack_CommandClapAttack(Abc_Frame_t *pAbc, int argc, char **argv) {
                     Abc_Print(-1,"Command line switch \"-r\" should be followed by an integer.\n");
                     goto usage;
                 }
-                probeResolutionSize = atoi(argv[globalUtilOptind]);
-                if (probeResolutionSize < 1) {
+                probeSize = atoi(argv[globalUtilOptind]);
+                if (probeSize < 1) {
                     Abc_Print(-1,"integer for switch \"-r\" must be greater than 0.\n");
                     goto usage;
                 }
@@ -126,7 +126,7 @@ int ClapAttack_CommandClapAttack(Abc_Frame_t *pAbc, int argc, char **argv) {
     // call the main function
     result = ClapAttack_ClapAttackAbc(
         pAbc, pKey, pOutFile, alg, keysConsideredCutoff, keyElimCutoff,
-        probeResolutionSize, pSeqInputCircuitFile, unrollTimes);
+        probeSize, pSeqInputCircuitFile, unrollTimes);
 
     // print verbose information if the verbose mode is on
     if (fVerbose) {

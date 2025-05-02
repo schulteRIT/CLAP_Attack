@@ -16,7 +16,7 @@ extern int ClapAttack_ClapAttackAbc(Abc_Frame_t *pAbc, char *pKey,
                                     char *pOutFile, int alg,
                                     int keysConsideredCutoff,
                                     float keyElimCutoff,
-                                    int probeResolutionSize,
+                                    int probeSize,
                                     char *pSeqCircuitFile, int unrollTimes);
                                     
 
